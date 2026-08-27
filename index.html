@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mariael Cosmetics — Catálogo</title>
+<meta name="description" content="Catálogo de productos Mariael Cosmetics. Realza tu belleza, resalta tu esencia.">
+<link rel="icon" href="logo.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --blush:#fbeeea;
+  --blush-deep:#f6ddd4;
+  --card:#fffaf8;
+  --rose:#c98a7d;
+  --rose-deep:#a8695c;
+  --gold:#d4af8c;
+  --ink:#2b2320;
+  --ink-soft:#5c4f49;
+  --line:#e8d3cb;
+  --shadow: 0 12px 28px -14px rgba(168,105,92,0.35);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:
+    radial-gradient(circle at 8% 0%, var(--blush-deep) 0%, transparent 45%),
+    radial-gradient(circle at 100% 15%, var(--blush-deep) 0%, transparent 40%),
+    var(--blush);
+  font-family:'Poppins', sans-serif;
+  color:var(--ink);
+  min-height:100vh;
+}
+::selection{background:var(--rose); color:#fff;}
+
+.hero{
+  text-align:center;
+  padding:44px 6vw 30px;
+  border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0));
+}
+.hero img{
+  width:96px; height:96px; border-radius:50%; object-fit:cover;
+  box-shadow:0 6px 20px rgba(168,105,92,0.35); border:3px solid #fff;
+  margin-bottom:14px;
+}
+.hero .sub{
+  font-size:12px; letter-spacing:0.32em; color:var(--rose-deep);
+  text-transform:uppercase; font-weight:600;
+}
+.hero h1{
+  font-family:'Playfair Display', serif; font-weight:700; letter-spacing:0.04em;
+  font-size:clamp(28px,6vw,42px); margin:6px 0 4px;
+}
+.hero .tag{
+  font-size:13px; color:var(--ink-soft); font-style:italic; letter-spacing:0.02em;
+}
+.hero .divider{ margin-top:16px; color:var(--rose); font-size:13px; }
+
+.toolbar{
+  max-width:1200px; margin:0 auto; padding:26px 6vw 0;
+  display:flex; justify-content:center;
+}
+.search-box{
+  width:100%; max-width:420px;
+  display:flex; align-items:center; gap:8px;
+  background:#fff; border:1px solid var(--line); border-radius:999px;
+  padding:12px 18px; box-shadow:var(--shadow);
+}
+.search-box svg{ width:16px; height:16px; fill:var(--rose-deep); flex-shrink:0; }
+.search-box input{
+  border:none; outline:none; font-family:'Poppins'; font-size:14px;
+  width:100%; background:transparent; color:var(--ink);
+}
+
+main{ max-width:1200px; margin:0 auto; padding:28px 6vw 60px; }
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(210px, 1fr));
+  gap:20px;
+}
+.product-card{
+  background:var(--card); border:1px solid var(--line); border-radius:18px;
+  overflow:hidden; box-shadow:var(--shadow);
+  transition:transform .2s ease, box-shadow .2s ease;
+  display:flex; flex-direction:column;
+}
+.product-card:hover{ transform:translateY(-4px); box-shadow:0 18px 34px -14px rgba(168,105,92,0.45); }
+.product-img{
+  width:100%; aspect-ratio:1/1; object-fit:cover; background:var(--blush-deep);
+  display:block;
+}
+.product-body{ padding:14px 16px 18px; display:flex; flex-direction:column; gap:6px; flex:1; }
+.product-name{
+  font-size:13.5px; font-weight:600; color:var(--ink); line-height:1.35;
+  min-height:2.7em;
+}
+.product-price{
+  margin-top:auto;
+  font-family:'Playfair Display', serif; font-weight:700; font-size:19px;
+  color:var(--rose-deep);
+}
+.empty-state{
+  grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--ink-soft);
+}
+.empty-state .heart{ font-size:26px; color:var(--rose); display:block; margin-bottom:10px; }
+
+footer{
+  text-align:center; padding:30px 20px 44px; color:var(--ink-soft); font-size:11.5px;
+  letter-spacing:0.05em;
+}
+footer .heart{ color:var(--rose); }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <img src="logo.jpg" alt="Mariael Cosmetics">
+  <div class="sub">Mariael Cosmetics</div>
+  <h1>Catálogo</h1>
+  <div class="tag">Realza tu belleza, resalta tu esencia</div>
+  <div class="divider">&#9825;</div>
+</div>
+
+<div class="toolbar">
+  <div class="search-box">
+    <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z"/></svg>
+    <input id="searchInput" type="text" placeholder="Buscar producto...">
+  </div>
+</div>
+
+<main>
+  <div class="grid" id="grid"></div>
+</main>
+
+<footer>MARIAEL COSMETICS <span class="heart">&#9825;</span> Santa Marta</footer>
+
+<script>
+const PRODUCTS = [{"ref": "10663", "nombre": "Kit De Vitamina C Bioaqua", "precio": 42900.0, "img": "images/10663.jpg"}, {"ref": "10632", "nombre": "Kit De Arroz Bioaqua", "precio": 42900.0, "img": "images/10632.jpg"}, {"ref": "11726", "nombre": "Matificante Elaya", "precio": 24300.0, "img": "images/11726.jpg"}, {"ref": "14057", "nombre": "Agua De Rosas Valan", "precio": 9400.0, "img": "images/14057.jpg"}, {"ref": "14643", "nombre": "Rubor Duo Sagui", "precio": 20400.0, "img": "images/14643.jpg"}, {"ref": "14644", "nombre": "Rubor Duo Sagui", "precio": 20400.0, "img": "images/14644.jpg"}, {"ref": "14248", "nombre": "Mantequilla Corporal Chocovibes Purpure 250 Ml", "precio": 32000.0, "img": "images/14248.jpg"}, {"ref": "13959", "nombre": "Mantequilla Corporal Bubble Gum Purpure 250 Ml", "precio": 32000.0, "img": "images/13959.jpg"}, {"ref": "14325", "nombre": "Set De Pomos Sagui 575", "precio": 8700.0, "img": "images/14325.jpg"}, {"ref": "12334", "nombre": "Corrector Miss Rouse", "precio": 8000.0, "img": "images/12334.jpg"}, {"ref": "10714", "nombre": "Gel Para Cejas", "precio": 23500.0, "img": "images/10714.jpg"}, {"ref": "11015", "nombre": "Balsamo De Cacao En Gol", "precio": 5000.0, "img": "images/11015.jpg"}, {"ref": "10180", "nombre": "Pañitos Pequeños Engol T-10", "precio": 3200.0, "img": "images/10180.jpg"}, {"ref": "10269", "nombre": "Prebase Elaya E019", "precio": 27500.0, "img": "images/10269.jpg"}, {"ref": "10945", "nombre": "Rubor Con Espejo Engol", "precio": 9400.0, "img": "images/10945.jpg"}, {"ref": "11693", "nombre": "Rubor Glam Engol", "precio": 14800.0, "img": "images/11693.jpg"}, {"ref": "12856", "nombre": "Agua De Rosas Sagui 60Ml", "precio": 10000.0, "img": "images/12856.jpg"}, {"ref": "10903", "nombre": "Polvo Compacto Myk-8032", "precio": 13800.0, "img": "images/10903.jpg"}, {"ref": "10368", "nombre": "Base Bb Cream Myk", "precio": 12600.0, "img": "images/10368.jpg"}, {"ref": "11683", "nombre": "Pestañina Prosa Negra", "precio": 20800.0, "img": "images/11683.jpg"}, {"ref": "14653", "nombre": "Set Encrespador Con Pomo", "precio": 9000.0, "img": "images/14653.jpg"}, {"ref": "14633", "nombre": "Rubor En Polvo Engol", "precio": 9500.0, "img": "images/14633.jpg"}, {"ref": "13570", "nombre": "Duo Rude Mini Gloss", "precio": 30000.0, "img": "images/13570.jpg"}, {"ref": "14427", "nombre": "Duo Bloom Bow Bloomshel", "precio": 28000.0, "img": "images/14427.jpg"}, {"ref": "14734", "nombre": "Lip Gloss Wardabeauty", "precio": 6000.0, "img": "images/14734.jpg"}, {"ref": "13881", "nombre": "Rubor Liquido Myk-6203", "precio": 24200.0, "img": "images/13881.jpg"}, {"ref": "11121", "nombre": "Hydratante De Fresa Bioaqua", "precio": 3600.0, "img": "images/11121.jpg"}, {"ref": "11421", "nombre": "Balsamo Hydratante Melocoton", "precio": 4000.0, "img": "images/11421.jpg"}, {"ref": "10389", "nombre": "Balsamo De Toronja Bioaqua", "precio": 4000.0, "img": "images/10389.jpg"}, {"ref": "13668", "nombre": "Balsamo Labial De Menta", "precio": 4000.0, "img": "images/13668.jpg"}, {"ref": "11684", "nombre": "Lip Oil Corazon Engol", "precio": 10000.0, "img": "images/11684.jpg"}, {"ref": "14627", "nombre": "Lip Oil Engol", "precio": 13600.0, "img": "images/14627.jpg"}, {"ref": "13659", "nombre": "Brillo Magico Kiss Glam", "precio": 7500.0, "img": "images/13659.jpg"}, {"ref": "14258", "nombre": "Tintas De Labios Hust", "precio": 6800.0, "img": "images/14258.jpg"}, {"ref": "14729", "nombre": "Humide Lapiz De Cejas", "precio": 25300.0, "img": "images/14729.jpg"}];
+const fmt = n => '$' + Math.round(n).toLocaleString('es-CO');
+
+function render(list){
+  const grid = document.getElementById('grid');
+  if(list.length===0){
+    grid.innerHTML = `<div class="empty-state"><span class="heart">&#9825;</span>No se encontraron productos</div>`;
+    return;
+  }
+  grid.innerHTML = list.map(p=>`
+    <div class="product-card">
+      <img class="product-img" src="${p.img}" alt="${p.nombre}" loading="lazy">
+      <div class="product-body">
+        <div class="product-name">${p.nombre}</div>
+        <div class="product-price">${fmt(p.precio)}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+document.getElementById('searchInput').addEventListener('input', (e)=>{
+  const q = e.target.value.trim().toLowerCase();
+  const filtered = PRODUCTS.filter(p=>p.nombre.toLowerCase().includes(q));
+  render(filtered);
+});
+
+render(PRODUCTS);
+</script>
+</body>
+</html>
