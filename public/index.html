@@ -517,28 +517,12 @@ document.getElementById('payBtn').addEventListener('click', async ()=>{
   const reference = generateReference();
   const currency = 'COP';
 
-  const config = {
-    currency: currency,
-    amountInCents: amountInCents,
-    reference: reference,
-    publicKey: WOMPI_PUBLIC_KEY,
-    redirectUrl: window.location.href.split('?')[0],
-  };
-  if(email || name || phone){
-    config.customerData = {};
-    if(email) config.customerData.email = email;
-    if(name) config.customerData.fullName = name;
-    if(phone){
-      config.customerData.phoneNumber = phone;
-      config.customerData.phoneNumberPrefix = '+57';
-    }
-  }
-
   const payBtn = document.getElementById('payBtn');
   payBtn.disabled = true;
   payBtn.textContent = 'Preparando pago...';
 
-  // Si hay API de firma configurada, pide la firma de integridad antes de abrir el widget
+  // Pide la firma de integridad a nuestro backend antes de ir a Wompi
+  let signature = null;
   if(WOMPI_SIGNATURE_API_URL && !WOMPI_SIGNATURE_API_URL.includes('REEMPLAZA')){
     try{
       const resp = await fetch(WOMPI_SIGNATURE_API_URL, {
@@ -546,44 +530,63 @@ document.getElementById('payBtn').addEventListener('click', async ()=>{
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reference, amountInCents, currency })
       });
-      if(resp.ok){
-        const data = await resp.json();
-        if(data.signature) config.signature = data.signature;
+      const data = await resp.json().catch(()=>({}));
+      console.log('[Wompi debug] respuesta de /api/wompi-signature:', resp.status, data);
+      if(resp.ok && data.signature){
+        signature = data.signature;
       } else {
-        console.warn('No se pudo obtener la firma de integridad, se continúa sin ella.');
+        payBtn.disabled = false;
+        payBtn.textContent = 'Pagar con Wompi';
+        showToast('No se pudo generar la firma de pago. Revisa la consola.');
+        console.error('[Wompi debug] la API de firma no devolvió una firma válida:', data);
+        return;
       }
     }catch(err){
-      console.warn('Error consultando la API de firma, se continúa sin ella.', err);
+      payBtn.disabled = false;
+      payBtn.textContent = 'Pagar con Wompi';
+      showToast('No se pudo conectar con la API de firma.');
+      console.error('[Wompi debug] error consultando la API de firma:', err);
+      return;
     }
   }
 
-  payBtn.textContent = 'Abriendo pago...';
+  console.log('[Wompi debug] datos que se van a enviar a Wompi:', {
+    publicKey: WOMPI_PUBLIC_KEY, currency, amountInCents, reference, signature
+  });
 
-  try{
-    const checkout = new WidgetCheckout(config);
-    checkout.open(function(result){
-      payBtn.disabled = false;
-      payBtn.textContent = 'Pagar con Wompi';
-      const tx = result.transaction;
-      if(tx && tx.status === 'APPROVED'){
-        cart = {};
-        saveCart();
-        renderCart();
-        renderGrid(currentList());
-        closeCartFn();
-        showToast('¡Pago aprobado! Gracias por tu compra 💖');
-      } else if(tx && tx.status === 'PENDING'){
-        showToast('Tu pago está pendiente de confirmación');
-      } else {
-        showToast('El pago no se completó. Intenta de nuevo.');
-      }
-    });
-  }catch(err){
-    payBtn.disabled = false;
-    payBtn.textContent = 'Pagar con Wompi';
-    showToast('No se pudo abrir Wompi. Revisa la llave pública.');
-    console.error(err);
+  payBtn.textContent = 'Redirigiendo a Wompi...';
+
+  // Método "Web Checkout": formulario estándar que redirige a la página
+  // de pago hospedada por Wompi. Más simple y fácil de depurar que el
+  // widget embebido: si algo falla, Wompi mismo muestra el detalle.
+  const form = document.createElement('form');
+  form.action = 'https://checkout.wompi.co/p/';
+  form.method = 'GET';
+
+  function addField(name, value){
+    if(value === undefined || value === null || value === '') return;
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = name;
+    input.value = value;
+    form.appendChild(input);
   }
+
+  addField('public-key', WOMPI_PUBLIC_KEY);
+  addField('currency', currency);
+  addField('amount-in-cents', amountInCents);
+  addField('reference', reference);
+  if(signature) addField('signature:integrity', signature);
+  addField('redirect-url', window.location.href.split('?')[0]);
+  if(email) addField('customer-data:email', email);
+  if(name) addField('customer-data:full-name', name);
+  if(phone){
+    addField('customer-data:phone-number', phone);
+    addField('customer-data:phone-number-prefix', '+57');
+  }
+
+  document.body.appendChild(form);
+  form.submit();
 });
 
 /* ---------------- INIT ---------------- */
