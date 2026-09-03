@@ -296,6 +296,10 @@ footer .heart{ color:var(--rose); }
         <label>Correo electrónico</label>
         <input type="email" id="custEmail" placeholder="tucorreo@ejemplo.com">
       </div>
+      <div>
+        <label>Dirección de envío</label>
+        <input type="text" id="custAddress" placeholder="Calle, número, barrio, ciudad">
+      </div>
     </div>
     <div class="cart-total-row">
       <span class="label">Total a pagar</span>
@@ -512,33 +516,43 @@ document.getElementById('payBtn').addEventListener('click', async ()=>{
   const name = document.getElementById('custName').value.trim();
   const phone = document.getElementById('custPhone').value.trim();
   const email = document.getElementById('custEmail').value.trim();
+  const address = document.getElementById('custAddress').value.trim();
+
+  if(!name || !phone || !address){
+    showToast('Completa nombre, teléfono y dirección de envío');
+    return;
+  }
 
   const amountInCents = Math.round(total * 100);
   const reference = generateReference();
   const currency = 'COP';
+  const orderItems = Object.entries(cart)
+    .filter(([ref,qty])=> qty>0 && pmap[ref])
+    .map(([ref,qty])=> ({ ref, name: pmap[ref].nombre, qty, price: pmap[ref].precio }));
 
   const payBtn = document.getElementById('payBtn');
   payBtn.disabled = true;
   payBtn.textContent = 'Preparando pago...';
 
-  // Pide la firma de integridad a nuestro backend antes de ir a Wompi
+  // Guarda el pedido (nombre, dirección, productos) y pide la firma de
+  // integridad a nuestro backend antes de ir a Wompi
   let signature = null;
-  if(WOMPI_SIGNATURE_API_URL && !WOMPI_SIGNATURE_API_URL.includes('REEMPLAZA')){
+  {
     try{
-      const resp = await fetch(WOMPI_SIGNATURE_API_URL, {
+      const resp = await fetch('/api/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reference, amountInCents, currency })
+        body: JSON.stringify({ reference, amountInCents, currency, name, phone, email, address, items: orderItems, total })
       });
       const data = await resp.json().catch(()=>({}));
-      console.log('[Wompi debug] respuesta de /api/wompi-signature:', resp.status, data);
+      console.log('[Wompi debug] respuesta de /api/create-order:', resp.status, data);
       if(resp.ok && data.signature){
         signature = data.signature;
       } else {
         payBtn.disabled = false;
         payBtn.textContent = 'Pagar con Wompi';
         showToast('No se pudo generar la firma de pago. Revisa la consola.');
-        console.error('[Wompi debug] la API de firma no devolvió una firma válida:', data);
+        console.error('[Wompi debug] create-order no devolvió una firma válida:', data);
         return;
       }
     }catch(err){
@@ -588,6 +602,36 @@ document.getElementById('payBtn').addEventListener('click', async ()=>{
   document.body.appendChild(form);
   form.submit();
 });
+
+/* ---------------- CONFIRMACIÓN DE PAGO (al volver de Wompi) ---------------- */
+(async function confirmPaymentIfNeeded(){
+  const params = new URLSearchParams(window.location.search);
+  const txId = params.get('id');
+  if(!txId) return;
+
+  // Limpia la URL para que un refresh no vuelva a disparar la verificación
+  const cleanUrl = window.location.href.split('?')[0];
+  window.history.replaceState({}, document.title, cleanUrl);
+
+  try{
+    const resp = await fetch('/api/confirm-order?id=' + encodeURIComponent(txId));
+    const data = await resp.json().catch(()=>({}));
+    console.log('[Wompi debug] respuesta de /api/confirm-order:', resp.status, data);
+
+    if(data.status === 'APPROVED'){
+      cart = {};
+      saveCart();
+      renderGrid(currentList());
+      showToast('¡Pago aprobado! Gracias por tu compra 💖');
+    } else if(data.status === 'PENDING'){
+      showToast('Tu pago está pendiente de confirmación');
+    } else if(data.status){
+      showToast('El pago no se completó (' + data.status + ')');
+    }
+  }catch(err){
+    console.error('[Wompi debug] error confirmando el pago:', err);
+  }
+})();
 
 /* ---------------- INIT ---------------- */
 updateCartBadge();
