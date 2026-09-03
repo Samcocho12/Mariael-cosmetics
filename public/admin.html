@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Pedidos — Mariael Cosmetics</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  :root{
+    --pink:#c98b83;
+    --pink-light:#f7e9e6;
+    --text:#3a2e2c;
+    --bg:#fffaf8;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    font-family: 'Georgia', 'Times New Roman', serif;
+    background: var(--bg);
+    color: var(--text);
+    margin:0;
+    padding:24px;
+  }
+  h1{ font-size: 1.6rem; margin: 0 0 4px; }
+  .sub{ color:#8a7a76; margin: 0 0 24px; font-size: 0.9rem; }
+  #loginBox{
+    max-width: 360px;
+    margin: 80px auto;
+    background:#fff;
+    padding: 32px;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    text-align:center;
+  }
+  #loginBox input{
+    width:100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #e5d5d1;
+    margin: 16px 0;
+    font-size: 1rem;
+  }
+  button{
+    background: var(--pink);
+    color:#fff;
+    border:none;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 1rem;
+    cursor:pointer;
+  }
+  button:hover{ opacity:0.9; }
+  #error{ color:#c0392b; font-size:0.9rem; min-height:20px; }
+  table{
+    width:100%;
+    border-collapse: collapse;
+    background:#fff;
+    border-radius: 12px;
+    overflow:hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+  }
+  th, td{
+    padding: 12px 14px;
+    text-align:left;
+    border-bottom: 1px solid #f1e6e3;
+    font-size: 0.9rem;
+    vertical-align: top;
+  }
+  th{ background: var(--pink-light); color:#7a5450; }
+  .badge{
+    display:inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight:bold;
+    white-space:nowrap;
+  }
+  .badge.approved{ background:#e2f4e6; color:#2f8f4e; }
+  .badge.pending{ background:#fdf3d8; color:#9a7b1c; }
+  .badge.declined, .badge.error, .badge.voided{ background:#fbe3e1; color:#c0392b; }
+  .items{ font-size:0.84rem; color:#6b5c58; }
+  #topBar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px; }
+  #refreshBtn{ background:#fff; color:var(--pink); border:1px solid var(--pink); }
+  .empty{ text-align:center; padding: 60px 20px; color:#a89792; }
+  .ref{ font-size:0.72rem; color:#b3a29e; }
+  @media (max-width: 700px){
+    table, thead, tbody, tr, th, td{ display:block; }
+    thead{ display:none; }
+    tr{ margin-bottom:14px; background:#fff; border-radius:10px; padding:10px; box-shadow:0 1px 6px rgba(0,0,0,0.05); }
+    td{ border:none; padding:4px 4px; }
+    td::before{ content: attr(data-label); font-weight:bold; color:#a89792; display:block; font-size:0.72rem; }
+  }
+</style>
+</head>
+<body>
+
+<div id="loginBox">
+  <h1>🔒 Pedidos</h1>
+  <p class="sub">Ingresa la contraseña para ver los pedidos de Mariael Cosmetics</p>
+  <input type="password" id="pwInput" placeholder="Contraseña">
+  <button id="loginBtn">Entrar</button>
+  <div id="error"></div>
+</div>
+
+<div id="dashboard" style="display:none;">
+  <div id="topBar">
+    <div>
+      <h1>Pedidos</h1>
+      <p class="sub" id="countText"></p>
+    </div>
+    <button id="refreshBtn">↻ Actualizar</button>
+  </div>
+  <div id="content"></div>
+</div>
+
+<script>
+const loginBox = document.getElementById('loginBox');
+const dashboard = document.getElementById('dashboard');
+const pwInput = document.getElementById('pwInput');
+const errorEl = document.getElementById('error');
+const content = document.getElementById('content');
+const countText = document.getElementById('countText');
+
+function fmtMoney(n){
+  return '$' + Number(n || 0).toLocaleString('es-CO');
+}
+
+function badgeClass(status){
+  if(status === 'approved') return 'approved';
+  if(status === 'pending') return 'pending';
+  if(status === 'voided') return 'voided';
+  return 'declined';
+}
+
+function statusLabel(status){
+  const map = { approved: 'Aprobado', pending: 'Pendiente', declined: 'Declinado', error: 'Error', voided: 'Anulado' };
+  return map[status] || status || '—';
+}
+
+async function loadOrders(){
+  const pw = sessionStorage.getItem('adminPw');
+  content.innerHTML = '<p class="empty">Cargando pedidos...</p>';
+  try{
+    const resp = await fetch('/api/orders', { headers: { 'x-admin-password': pw || '' } });
+    const data = await resp.json();
+    if(!resp.ok){
+      if(resp.status === 401){
+        sessionStorage.removeItem('adminPw');
+        showLogin('Contraseña incorrecta');
+        return;
+      }
+      content.innerHTML = '<p class="empty">' + (data.error || 'Error cargando pedidos') + '</p>';
+      return;
+    }
+    renderOrders(data.orders || []);
+  }catch(err){
+    content.innerHTML = '<p class="empty">No se pudo conectar con el servidor.</p>';
+  }
+}
+
+function renderOrders(orders){
+  countText.textContent = orders.length + ' pedido' + (orders.length === 1 ? '' : 's');
+  if(orders.length === 0){
+    content.innerHTML = '<p class="empty">Todavía no hay pedidos.</p>';
+    return;
+  }
+  let html = '<table><thead><tr><th>Fecha</th><th>Cliente</th><th>Dirección</th><th>Productos</th><th>Total</th><th>Estado</th></tr></thead><tbody>';
+  orders.forEach(o => {
+    const date = o.createdAt ? new Date(o.createdAt).toLocaleString('es-CO') : '—';
+    const itemsText = (o.items || []).map(i => `${i.qty || 1}x ${i.name}`).join('<br>');
+    html += `<tr>
+      <td data-label="Fecha">${date}</td>
+      <td data-label="Cliente"><strong>${o.name || ''}</strong><br>${o.phone || ''}${o.email ? '<br>' + o.email : ''}</td>
+      <td data-label="Dirección">${o.address || ''}</td>
+      <td data-label="Productos" class="items">${itemsText}</td>
+      <td data-label="Total">${fmtMoney(o.total)}</td>
+      <td data-label="Estado"><span class="badge ${badgeClass(o.status)}">${statusLabel(o.status)}</span><div class="ref">${o.reference || ''}</div></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  content.innerHTML = html;
+}
+
+function showLogin(msg){
+  loginBox.style.display = 'block';
+  dashboard.style.display = 'none';
+  errorEl.textContent = msg || '';
+}
+
+function enterDashboard(){
+  loginBox.style.display = 'none';
+  dashboard.style.display = 'block';
+  loadOrders();
+}
+
+document.getElementById('loginBtn').addEventListener('click', () => {
+  const pw = pwInput.value.trim();
+  if(!pw) return;
+  sessionStorage.setItem('adminPw', pw);
+  enterDashboard();
+});
+
+pwInput.addEventListener('keydown', (e) => {
+  if(e.key === 'Enter') document.getElementById('loginBtn').click();
+});
+
+document.getElementById('refreshBtn').addEventListener('click', loadOrders);
+
+// Si ya habías entrado antes en esta pestaña, entra directo sin pedir
+// la contraseña de nuevo.
+if(sessionStorage.getItem('adminPw')){
+  enterDashboard();
+}
+</script>
+</body>
+</html>
