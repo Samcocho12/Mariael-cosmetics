@@ -554,7 +554,7 @@ footer a:hover{color:var(--rose-deep);}
 <footer>
   <div class="wrap">
     <div>
-      <img src="logo.jpg" alt="Mariael Cosmetics">
+      <img src="logo.jpg" alt="Mariael Cosmetics" id="footerLogo">
     </div>
     <div>
       <h4>Tienda</h4>
@@ -973,6 +973,17 @@ function updateActiveNav(){
   });
 }
 window.addEventListener('scroll', updateActiveNav, {passive:true});
+
+/* ---------------- ACCESO AL PANEL ----------------
+   Toca 5 veces seguidas el logo del final de la página para
+   abrir el panel de pedidos (/admin.html). */
+let logoTaps = 0, logoTimer;
+document.getElementById('footerLogo').addEventListener('click', ()=>{
+  logoTaps++;
+  clearTimeout(logoTimer);
+  logoTimer = setTimeout(()=> logoTaps = 0, 1500);
+  if(logoTaps >= 5){ logoTaps = 0; window.location.href = 'admin.html'; }
+});
 
 /* ---------------- INIT ---------------- */
 document.getElementById('year').textContent = new Date().getFullYear();

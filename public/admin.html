@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <title>Pedidos — Mariael Cosmetics</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#c98b83">
+<link rel="manifest" href="admin-manifest.json">
+<link rel="icon" href="admin-icon-192.png">
+<link rel="apple-touch-icon" href="admin-icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pedidos MC">
 <style>
   :root{
     --pink:#c98b83;
@@ -106,7 +114,7 @@
       <h1>Pedidos</h1>
       <p class="sub" id="countText"></p>
     </div>
-    <button id="refreshBtn">↻ Actualizar</button>
+    <div style="display:flex;gap:8px;"><button id="refreshBtn">↻ Actualizar</button><button id="logoutBtn" style="background:#fff;color:var(--pink);border:1px solid var(--pink);">Salir</button></div>
   </div>
   <div id="content"></div>
 </div>
@@ -137,14 +145,14 @@ function statusLabel(status){
 }
 
 async function loadOrders(){
-  const pw = sessionStorage.getItem('adminPw');
+  const pw = localStorage.getItem('adminPw');
   content.innerHTML = '<p class="empty">Cargando pedidos...</p>';
   try{
     const resp = await fetch('/api/orders', { headers: { 'x-admin-password': pw || '' } });
     const data = await resp.json();
     if(!resp.ok){
       if(resp.status === 401){
-        sessionStorage.removeItem('adminPw');
+        localStorage.removeItem('adminPw');
         showLogin('Contraseña incorrecta');
         return;
       }
@@ -195,7 +203,7 @@ function enterDashboard(){
 document.getElementById('loginBtn').addEventListener('click', () => {
   const pw = pwInput.value.trim();
   if(!pw) return;
-  sessionStorage.setItem('adminPw', pw);
+  localStorage.setItem('adminPw', pw);
   enterDashboard();
 });
 
@@ -204,10 +212,15 @@ pwInput.addEventListener('keydown', (e) => {
 });
 
 document.getElementById('refreshBtn').addEventListener('click', loadOrders);
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  localStorage.removeItem('adminPw');
+  pwInput.value = '';
+  showLogin('');
+});
 
-// Si ya habías entrado antes en esta pestaña, entra directo sin pedir
-// la contraseña de nuevo.
-if(sessionStorage.getItem('adminPw')){
+// Si ya entraste antes en este dispositivo, entra directo sin pedir
+// la contraseña de nuevo (usa "Salir" para olvidarla).
+if(localStorage.getItem('adminPw')){
   enterDashboard();
 }
 </script>
