@@ -1,81 +1,77 @@
 // api/create-order.js
 //
-// Se llama justo antes de mandar al cliente a pagar con Wompi. Hace dos
-// cosas:
-//   1. Guarda el pedido (cliente, dirección, productos) en la base de
-//      datos con estado "pending", para que aparezca en tu dashboard
-//      de /admin.html incluso si el cliente cierra la pestaña antes de
-//      terminar de pagar.
-//   2. Calcula la firma de integridad que Wompi exige, igual que hacía
-//      antes /api/wompi-signature.js.
+// Se llama cuando el cliente toca "Enviar pedido por WhatsApp".
+// Guarda el pedido (cliente, dirección, productos) en la base de datos
+// para que aparezca en tu dashboard de /admin.html, y luego la tienda
+// abre WhatsApp con el pedido ya escrito.
+//
+// Si la base de datos no está configurada, el pedido igual se envía por
+// WhatsApp; solo no queda registrado en el dashboard.
 
-const crypto = require('crypto');
 const store = require('./_lib/orders-store');
 
-function setCors(res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+// Limpia texto para que nadie pueda meter HTML/código en el dashboard.
+function clean(value, max) {
+  return String(value == null ? '' : value)
+    .replace(/[<>]/g, '')
+    .trim()
+    .slice(0, max || 200);
 }
 
 module.exports = async (req, res) => {
-  setCors(res);
-
-  if (req.method === 'OPTIONS') {
-    res.status(204).end();
-    return;
-  }
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Método no permitido' });
     return;
   }
 
   try {
-    const secret = process.env.WOMPI_INTEGRITY_SECRET;
-    if (!secret) {
-      res.status(500).json({ error: 'Falta configurar WOMPI_INTEGRITY_SECRET en Vercel' });
-      return;
-    }
+    const body = req.body || {};
+    const reference = clean(body.reference, 60);
+    const name = clean(body.name, 100);
+    const phone = clean(body.phone, 30);
+    const email = clean(body.email, 120);
+    const address = clean(body.address, 250);
+    const note = clean(body.note, 400);
 
-    const {
-      reference, amountInCents, currency,
-      name, phone, email, address, items, total,
-    } = req.body || {};
-
-    if (!reference || !amountInCents || !currency) {
-      res.status(400).json({ error: 'Faltan parámetros: reference, amountInCents, currency' });
-      return;
-    }
-    if (!name || !phone || !address) {
+    if (!reference || !name || !phone || !address) {
       res.status(400).json({ error: 'Faltan datos del cliente: nombre, teléfono o dirección' });
       return;
     }
 
-    // Mismo orden que exige Wompi: referencia + monto_en_centavos + moneda + secreto
-    const concatenated = `${reference}${amountInCents}${currency}${secret}`;
-    const signature = crypto.createHash('sha256').update(concatenated).digest('hex');
+    const items = (Array.isArray(body.items) ? body.items : []).slice(0, 100).map((i) => ({
+      ref: clean(i.ref, 20),
+      name: clean(i.name, 120),
+      qty: Math.max(1, Math.min(999, parseInt(i.qty, 10) || 1)),
+      price: Math.max(0, Number(i.price) || 0),
+    }));
+    if (items.length === 0) {
+      res.status(400).json({ error: 'El pedido no tiene productos' });
+      return;
+    }
+    const total = items.reduce((sum, i) => sum + i.qty * i.price, 0);
 
-    if (store.isConfigured()) {
-      await store.saveOrder({
-        reference,
-        name,
-        phone,
-        email: email || '',
-        address,
-        items: items || [],
-        total: total || 0,
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-      });
-    } else {
-      // No interrumpimos el pago si la base de datos no está lista aún,
-      // pero avisamos en los logs de Vercel para que se note.
+    if (!store.isConfigured()) {
       console.warn('[create-order] Base de datos no configurada (faltan KV_REST_API_URL / KV_REST_API_TOKEN). El pedido no se guardó.');
+      res.status(200).json({ saved: false });
+      return;
     }
 
-    res.status(200).json({ signature });
+    await store.saveOrder({
+      reference,
+      name,
+      phone,
+      email,
+      address,
+      note,
+      items,
+      total,
+      status: 'whatsapp',
+      createdAt: new Date().toISOString(),
+    });
+
+    res.status(200).json({ saved: true });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Error creando el pedido' });
+    res.status(500).json({ error: 'Error guardando el pedido' });
   }
 };

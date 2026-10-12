@@ -126,12 +126,13 @@ function fmtMoney(n){
 function badgeClass(status){
   if(status === 'approved') return 'approved';
   if(status === 'pending') return 'pending';
+  if(status === 'whatsapp') return 'pending';
   if(status === 'voided') return 'voided';
   return 'declined';
 }
 
 function statusLabel(status){
-  const map = { approved: 'Aprobado', pending: 'Pendiente', declined: 'Declinado', error: 'Error', voided: 'Anulado' };
+  const map = { whatsapp: 'Por WhatsApp', approved: 'Aprobado', pending: 'Pendiente', declined: 'Declinado', error: 'Error', voided: 'Anulado' };
   return map[status] || status || '—';
 }
 
@@ -169,7 +170,7 @@ function renderOrders(orders){
     html += `<tr>
       <td data-label="Fecha">${date}</td>
       <td data-label="Cliente"><strong>${o.name || ''}</strong><br>${o.phone || ''}${o.email ? '<br>' + o.email : ''}</td>
-      <td data-label="Dirección">${o.address || ''}</td>
+      <td data-label="Dirección">${o.address || ''}${o.note ? '<br><em>Nota: ' + o.note + '</em>' : ''}</td>
       <td data-label="Productos" class="items">${itemsText}</td>
       <td data-label="Total">${fmtMoney(o.total)}</td>
       <td data-label="Estado"><span class="badge ${badgeClass(o.status)}">${statusLabel(o.status)}</span><div class="ref">${o.reference || ''}</div></td>
